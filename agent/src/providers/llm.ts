@@ -1,13 +1,14 @@
 import * as openai from '@livekit/agents-plugin-openai';
 import type { llm } from '@livekit/agents';
 import type { BehaviorSettings } from '@voicelab/shared';
-import { env } from '../config.js';
+import { openAiCompatible } from '../config.js';
 
 export function buildLlm(settings: BehaviorSettings): llm.LLM {
   switch (settings.llmProvider) {
     case 'openai':
       return new openai.LLM({
-        apiKey: env.OPENAI_API_KEY,
+        apiKey: openAiCompatible.apiKey,
+        baseURL: openAiCompatible.baseURL,
         model: settings.llmModel,
         temperature: settings.llmTemperature,
       });

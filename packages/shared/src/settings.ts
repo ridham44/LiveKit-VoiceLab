@@ -140,7 +140,7 @@ export function defaultAgentConfig(): AgentConfigInput {
   return agentConfigInputSchema.parse({
     voiceSettings: {
       ttsProvider: 'openai',
-      ttsModel: 'gpt-4o-mini-tts',
+      ttsModel: 'openai/gpt-4o-mini-tts-2025-12-15',
       voiceId: 'alloy',
       speed: 1,
       volume: 1,
@@ -152,7 +152,7 @@ export function defaultAgentConfig(): AgentConfigInput {
       dynamicSpeed: { enabled: false, urgentMultiplier: 1.25, complexMultiplier: 0.85 },
     },
     transcriptionSettings: {
-      sttProvider: 'deepgram',
+      sttProvider: 'openai',
       mode: 'accurate',
       language: 'en',
       vocabulary: [],
@@ -163,7 +163,7 @@ export function defaultAgentConfig(): AgentConfigInput {
     },
     behaviorSettings: {
       llmProvider: 'openai',
-      llmModel: 'gpt-4o-mini',
+      llmModel: 'openai/gpt-4o-mini',
       llmTemperature: 0.8,
       turnDetection: 'vad',
       endpointing: { mode: 'fixed', minDelayMs: 500, maxDelayMs: 3000 },

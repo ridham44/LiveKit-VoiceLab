@@ -10,13 +10,14 @@ import * as elevenlabs from '@livekit/agents-plugin-elevenlabs';
 import * as openai from '@livekit/agents-plugin-openai';
 import type { tts } from '@livekit/agents';
 import type { VoiceSettings } from '@voicelab/shared';
-import { env } from '../config.js';
+import { env, openAiCompatible } from '../config.js';
 
 export function buildTts(settings: VoiceSettings): tts.TTS {
   switch (settings.ttsProvider) {
     case 'openai':
       return new openai.TTS({
-        apiKey: env.OPENAI_API_KEY,
+        apiKey: openAiCompatible.apiKey,
+        baseURL: openAiCompatible.baseURL,
         model: settings.ttsModel,
         voice: settings.voiceId as never,
         speed: settings.speed,

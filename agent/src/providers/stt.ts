@@ -7,7 +7,7 @@ import * as deepgram from '@livekit/agents-plugin-deepgram';
 import * as openai from '@livekit/agents-plugin-openai';
 import type { stt } from '@livekit/agents';
 import { STT_CATALOG, type TranscriptionSettings } from '@voicelab/shared';
-import { env } from '../config.js';
+import { env, openAiCompatible } from '../config.js';
 
 function resolveModel(settings: TranscriptionSettings): string {
   if (settings.mode === 'custom' && settings.customModel) return settings.customModel;
@@ -32,7 +32,8 @@ export function buildStt(settings: TranscriptionSettings): stt.STT {
       });
     case 'openai':
       return new openai.STT({
-        apiKey: env.OPENAI_API_KEY,
+        apiKey: openAiCompatible.apiKey,
+        baseURL: openAiCompatible.baseURL,
         model,
         language: settings.language,
         // No native keyword-boost API on OpenAI transcription models — best-effort fallback:

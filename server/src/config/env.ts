@@ -2,8 +2,15 @@
  * Validated environment configuration. Fails fast at boot with a clear message instead of
  * surfacing a confusing error deep inside a request handler later.
  */
-import 'dotenv/config';
+import { fileURLToPath } from 'node:url';
+import { dirname, resolve } from 'node:path';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+// Prefer the root .env so shared LiveKit credentials need to be entered once.
+const configDirectory = dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: resolve(configDirectory, '../../.env') });
+dotenv.config({ path: resolve(configDirectory, '../../../.env'), override: true });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
