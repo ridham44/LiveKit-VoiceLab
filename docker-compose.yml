@@ -1,0 +1,70 @@
+# LiveKit VoiceLab — local infrastructure.
+#
+# This project itself talks to LiveKit Cloud (or any LiveKit server) over the network via
+# LIVEKIT_URL — it is not started here. Run `livekit-server --dev` locally if you want a
+# fully offline LiveKit server instead of LiveKit Cloud (see README "LiveKit Cloud setup").
+#
+# What *is* started here are VoiceLab's own data services:
+#   - postgres: application database (agents, configs, calls, transcripts, metrics, knowledge
+#     chunks + embeddings via the pgvector extension).
+#   - minio: S3-compatible object storage for uploaded knowledge documents. In production,
+#     point the same S3_* env vars at real AWS S3 / Cloudflare R2 / Backblaze B2 instead.
+name: voicelab
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: voicelab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-voicelab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-voicelab}
+      POSTGRES_DB: ${POSTGRES_DB:-voicelab}
+    ports:
+      - "${POSTGRES_PORT:-5434}:5432"
+    volumes:
+      - voicelab_postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-voicelab} -d ${POSTGRES_DB:-voicelab}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    container_name: voicelab-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY_ID:-voicelab}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_ACCESS_KEY:-voicelab123}
+    ports:
+      - "${MINIO_API_PORT:-9010}:9000"
+      - "${MINIO_CONSOLE_PORT:-9011}:9001"
+    volumes:
+      - voicelab_minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot job: creates the default bucket on first startup so the server never has to.
+  minio-init:
+    image: minio/mc:latest
+    container_name: voicelab-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 ${S3_ACCESS_KEY_ID:-voicelab} ${S3_SECRET_ACCESS_KEY:-voicelab123} &&
+        mc mb --ignore-existing local/${S3_BUCKET:-voicelab-knowledge} &&
+        mc anonymous set download local/${S3_BUCKET:-voicelab-knowledge}
+      "
+    restart: "no"
+
+volumes:
+  voicelab_postgres_data:
+  voicelab_minio_data:

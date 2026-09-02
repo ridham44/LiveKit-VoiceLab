@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Env files — never commit real secrets. Only *.env.example files are tracked.
+.env
+.env.*
+!.env.example
+!*/.env.example
+
+# Prisma
+server/prisma/generated/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+
+# Vite
+client/dist/
+client/.vite/
+
+# Local scratch
+*.tar.gz
+*.tgz

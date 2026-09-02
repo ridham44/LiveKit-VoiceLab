@@ -1,0 +1,247 @@
+// LiveKit VoiceLab — application database schema.
+//
+// Stores agent definitions, versioned configurations, call sessions, transcripts,
+// per-event latency/interruption metrics, tool-call logs, and the knowledge-base
+// document/chunk/embedding tables used for RAG (pgvector similarity search).
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Agents & configuration
+// ---------------------------------------------------------------------------
+
+model Agent {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  configs   AgentConfig[]
+  calls     Call[]
+  documents KnowledgeDocument[]
+
+  @@map("agents")
+}
+
+/// One row per saved configuration. `isActive` marks the config a new session should load;
+/// saving a new active config flips the previous active one to `isActive = false` rather than
+/// overwriting it, so configuration history is preserved (see server/src/services/agents.ts).
+model AgentConfig {
+  id        String   @id @default(cuid())
+  agentId   String
+  agent     Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  isActive  Boolean  @default(true)
+  label     String?
+  createdAt DateTime @default(now())
+
+  // Normalized for queryability / joins in analytics & call history.
+  sttProvider String
+  llmProvider String
+  ttsProvider String
+
+  // Full nested settings blobs (validated by shared zod schemas — see
+  // packages/shared/src/settings.ts — before ever reaching this column).
+  voiceSettings         Json
+  transcriptionSettings Json
+  behaviorSettings      Json
+  callSettings          Json
+  backgroundAudio       Json
+  tools                 Json
+
+  calls Call[]
+
+  @@index([agentId, isActive])
+  @@map("agent_configs")
+}
+
+// ---------------------------------------------------------------------------
+// Calls / sessions
+// ---------------------------------------------------------------------------
+
+enum CallStatus {
+  ACTIVE
+  COMPLETED
+  FAILED
+}
+
+enum TerminationReason {
+  USER_DISCONNECTED
+  MAX_DURATION_REACHED
+  SILENCE_TIMEOUT
+  IDLE_TIMEOUT
+  ERROR
+  MANUAL
+  UNKNOWN
+}
+
+model Call {
+  id                 String             @id @default(cuid())
+  agentId            String
+  agent              Agent              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  configId           String?
+  config             AgentConfig?       @relation(fields: [configId], references: [id])
+  roomName           String
+  participantIdentity String?
+  status             CallStatus         @default(ACTIVE)
+  terminationReason  TerminationReason?
+  startedAt          DateTime           @default(now())
+  endedAt            DateTime?
+  durationMs         Int?
+
+  sttProvider String
+  llmProvider String
+  ttsProvider String
+
+  transcripts TranscriptEntry[]
+  metrics     CallMetric[]
+  toolCalls   ToolCallLog[]
+
+  @@index([agentId, startedAt])
+  @@map("calls")
+}
+
+enum TranscriptRole {
+  USER
+  AGENT
+}
+
+model TranscriptEntry {
+  id          String         @id @default(cuid())
+  callId      String
+  call        Call           @relation(fields: [callId], references: [id], onDelete: Cascade)
+  role        TranscriptRole
+  text        String
+  isFinal     Boolean        @default(true)
+  language    String?
+  confidence  Float?
+  timestampMs Int
+  createdAt   DateTime       @default(now())
+
+  @@index([callId, timestampMs])
+  @@map("transcript_entries")
+}
+
+/// A generic timeseries of instrumented events (see packages/shared/src/analytics.ts for the
+/// exact `kind` union). Aggregation (avg/min/max, historical buckets) is computed in SQL over
+/// this table rather than pre-aggregated, so the definition of "latency" stays auditable.
+model CallMetric {
+  id        String   @id @default(cuid())
+  callId    String
+  call      Call     @relation(fields: [callId], references: [id], onDelete: Cascade)
+  kind      String
+  valueMs   Float?
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([callId, kind])
+  @@map("call_metrics")
+}
+
+enum ToolCallStatus {
+  SUCCESS
+  ERROR
+}
+
+model ToolCallLog {
+  id         String         @id @default(cuid())
+  callId     String
+  call       Call           @relation(fields: [callId], references: [id], onDelete: Cascade)
+  toolName   String
+  args       Json
+  result     Json?
+  errorMessage String?
+  status     ToolCallStatus
+  latencyMs  Int
+  createdAt  DateTime       @default(now())
+
+  @@index([callId, createdAt])
+  @@map("tool_call_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Knowledge base / RAG
+// ---------------------------------------------------------------------------
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model KnowledgeDocument {
+  id           String         @id @default(cuid())
+  agentId      String
+  agent        Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  filename     String
+  mimeType     String
+  sizeBytes    Int
+  storageKey   String
+  status       DocumentStatus @default(PENDING)
+  errorMessage String?
+  chunkCount   Int            @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  chunks KnowledgeChunk[]
+
+  @@index([agentId])
+  @@map("knowledge_documents")
+}
+
+model KnowledgeChunk {
+  id          String            @id @default(cuid())
+  documentId  String
+  document    KnowledgeDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  chunkIndex  Int
+  content     String
+  tokenCount  Int
+  /// text-embedding-3-small, 1536 dims. Prisma has no native vector type, so this column is
+  /// declared `Unsupported` and written/queried with raw SQL — see server/src/services/rag.ts.
+  embedding   Unsupported("vector(1536)")?
+  createdAt   DateTime          @default(now())
+
+  @@index([documentId])
+  @@map("knowledge_chunks")
+}
+
+// ---------------------------------------------------------------------------
+// Demo backend data for the Actions/Tools examples.
+//
+// The *tool-calling pipeline* itself is real end-to-end (LLM decides to call a tool -> agent
+// executes it -> real HTTP round trip to this server -> real SQL query -> structured result ->
+// back to the LLM -> spoken by TTS). What's a demo is the *business data* these two tools query
+// against — a seeded, fictional dataset, since VoiceLab has no real order/scheduling system to
+// connect to. This is labeled in the UI (see packages/shared/src/capability.ts) so it's never
+// confused with the tool-calling mechanism, which is native LLM function calling.
+// ---------------------------------------------------------------------------
+
+model DemoOrder {
+  id                 String   @id
+  status             String
+  items              Json
+  total              Float
+  estimatedDelivery  DateTime?
+  createdAt          DateTime @default(now())
+
+  @@map("demo_orders")
+}
+
+model Appointment {
+  id              String   @id @default(cuid())
+  confirmationId  String   @unique
+  customer        String
+  date            String
+  time            String
+  service         String
+  createdAt       DateTime @default(now())
+
+  @@map("appointments")
+}

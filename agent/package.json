@@ -1,0 +1,33 @@
+{
+  "name": "@voicelab/agent",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/agent.js",
+  "scripts": {
+    "dev": "tsx src/agent.ts dev",
+    "start": "node dist/agent.js start",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "download-files": "tsx src/agent.ts download-files"
+  },
+  "dependencies": {
+    "@livekit/agents": "^1.7.1",
+    "@livekit/agents-plugin-cartesia": "^1.7.1",
+    "@livekit/agents-plugin-deepgram": "^1.7.1",
+    "@livekit/agents-plugin-elevenlabs": "^1.7.1",
+    "@livekit/agents-plugin-livekit": "^1.7.1",
+    "@livekit/agents-plugin-openai": "^1.7.1",
+    "@livekit/agents-plugin-silero": "^1.7.1",
+    "@livekit/noise-cancellation-node": "^0.2.0",
+    "@livekit/rtc-node": "^0.13.34",
+    "@voicelab/shared": "*",
+    "dotenv": "^17.2.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,14 @@
+# Fully local LiveKit server for offline development — an alternative to a LiveKit Cloud
+# project. Run with:
+#   livekit-server --config infra/livekit/dev-config.yaml --node-ip 127.0.0.1 --dev
+# (see README "LiveKit Cloud setup" for the LiveKit Cloud alternative). --node-ip is passed on
+# the command line (not supported as a YAML key) and pins media advertisement to loopback,
+# since this is meant for a browser client and agent running on the SAME machine as the server.
+port: 7880
+rtc:
+  tcp_port: 7881
+  port_range_start: 50100
+  port_range_end: 50200
+  use_external_ip: false
+keys:
+  APIQsjVQSgMxsNF: Jiz6V182fMwhpUQ0lT0p6eIxHetWJWT8wgivVpaAa4mB
