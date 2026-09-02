@@ -19,10 +19,10 @@ const CHUNK_SIZE_CHARS = 1200;
 const CHUNK_OVERLAP_CHARS = 150;
 
 function openaiClient(): OpenAI {
-  if (!env.OPENAI_API_KEY) {
-    throw new Error('OPENAI_API_KEY is required for knowledge-base embeddings (server/.env)');
+  if (!env.OPENROUTER_API_KEY) {
+    throw new Error('OPENROUTER_API_KEY is required for knowledge-base embeddings (.env)');
   }
-  return new OpenAI({ apiKey: env.OPENAI_API_KEY });
+  return new OpenAI({ apiKey: env.OPENROUTER_API_KEY, baseURL: env.OPENROUTER_BASE_URL });
 }
 
 async function extractText(buffer: Buffer, mimeType: string, filename: string): Promise<string> {

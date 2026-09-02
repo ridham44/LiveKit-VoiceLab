@@ -23,10 +23,8 @@ const envSchema = z.object({
   LIVEKIT_API_SECRET: z.string().min(1, 'LIVEKIT_API_SECRET is required — see server/.env.example'),
   LIVEKIT_AGENT_NAME: z.string().default('voicelab-agent'),
 
-  OPENAI_API_KEY: z.string().optional(),
-  DEEPGRAM_API_KEY: z.string().optional(),
-  ELEVEN_API_KEY: z.string().optional(),
-  CARTESIA_API_KEY: z.string().optional(),
+  OPENROUTER_API_KEY: z.string().optional(),
+  OPENROUTER_BASE_URL: z.string().url().default('https://openrouter.ai/api/v1'),
   OPENWEATHER_API_KEY: z.string().optional(),
 
   S3_ENDPOINT: z.string().min(1, 'S3_ENDPOINT is required — see server/.env.example'),

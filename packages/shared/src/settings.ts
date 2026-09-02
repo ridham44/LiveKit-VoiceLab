@@ -139,7 +139,7 @@ export type AgentConfigInput = z.infer<typeof agentConfigInputSchema>;
 export function defaultAgentConfig(): AgentConfigInput {
   return agentConfigInputSchema.parse({
     voiceSettings: {
-      ttsProvider: 'openai',
+      ttsProvider: 'openrouter',
       ttsModel: 'openai/gpt-4o-mini-tts-2025-12-15',
       voiceId: 'alloy',
       speed: 1,
@@ -152,7 +152,7 @@ export function defaultAgentConfig(): AgentConfigInput {
       dynamicSpeed: { enabled: false, urgentMultiplier: 1.25, complexMultiplier: 0.85 },
     },
     transcriptionSettings: {
-      sttProvider: 'openai',
+      sttProvider: 'openrouter',
       mode: 'accurate',
       language: 'en',
       vocabulary: [],
@@ -162,7 +162,7 @@ export function defaultAgentConfig(): AgentConfigInput {
       diarization: false,
     },
     behaviorSettings: {
-      llmProvider: 'openai',
+      llmProvider: 'openrouter',
       llmModel: 'openai/gpt-4o-mini',
       llmTemperature: 0.8,
       turnDetection: 'vad',

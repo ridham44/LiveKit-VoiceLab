@@ -3,11 +3,10 @@
  * model via the catalog rather than being a LiveKit primitive — see
  * packages/shared/src/catalog.ts STT_CATALOG[provider].modes and capability.ts 'stt.mode'.
  */
-import * as deepgram from '@livekit/agents-plugin-deepgram';
 import * as openai from '@livekit/agents-plugin-openai';
 import type { stt } from '@livekit/agents';
 import { STT_CATALOG, type TranscriptionSettings } from '@voicelab/shared';
-import { env, openAiCompatible } from '../config.js';
+import { openAiCompatible } from '../config.js';
 
 function resolveModel(settings: TranscriptionSettings): string {
   if (settings.mode === 'custom' && settings.customModel) return settings.customModel;
@@ -19,18 +18,7 @@ export function buildStt(settings: TranscriptionSettings): stt.STT {
   const model = resolveModel(settings);
 
   switch (settings.sttProvider) {
-    case 'deepgram':
-      return new deepgram.STT({
-        apiKey: env.DEEPGRAM_API_KEY,
-        model,
-        language: settings.language,
-        interimResults: true,
-        profanityFilter: settings.profanityFilter,
-        diarize: settings.diarization,
-        keywords: settings.boostedKeywords.map((k) => [k.term, k.boost] as [string, number]),
-        keyterm: settings.vocabulary,
-      });
-    case 'openai':
+    case 'openrouter':
       return new openai.STT({
         apiKey: openAiCompatible.apiKey,
         baseURL: openAiCompatible.baseURL,

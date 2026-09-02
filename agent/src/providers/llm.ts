@@ -5,7 +5,7 @@ import { openAiCompatible } from '../config.js';
 
 export function buildLlm(settings: BehaviorSettings): llm.LLM {
   switch (settings.llmProvider) {
-    case 'openai':
+    case 'openrouter':
       return new openai.LLM({
         apiKey: openAiCompatible.apiKey,
         baseURL: openAiCompatible.baseURL,
