@@ -14,7 +14,7 @@ import { buildStorageKey, getObjectBuffer, uploadObject } from './storage.js';
 import { toKnowledgeDocumentDto } from '../models/mappers.js';
 import { NotFoundError } from './agents.js';
 
-const EMBEDDING_MODEL = 'text-embedding-3-small';
+const EMBEDDING_MODEL = 'openai/text-embedding-3-small';
 const CHUNK_SIZE_CHARS = 1200;
 const CHUNK_OVERLAP_CHARS = 150;
 
@@ -188,7 +188,7 @@ export async function queryKnowledgeBase(agentId: string, question: string) {
   const client = openaiClient();
   const context = chunks.map((c, i) => `[${i + 1}] (from ${c.filename})\n${c.content}`).join('\n\n');
   const completion = await client.chat.completions.create({
-    model: 'gpt-4o-mini',
+    model: 'openai/gpt-4o-mini',
     temperature: 0.2,
     messages: [
       {

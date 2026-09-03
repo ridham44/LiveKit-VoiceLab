@@ -24,8 +24,11 @@ import { buildTools } from './tools/index.js';
 import type { AgentUserData } from './types.js';
 
 const DEFAULT_INSTRUCTIONS = `You are a helpful, friendly voice assistant built to demonstrate LiveKit Voice AI capabilities.
-Keep responses concise and conversational, since they will be spoken aloud. Use the available
-tools (weather, appointment booking, order lookup, knowledge base search) when relevant.`;
+Keep responses concise and conversational, since they will be spoken aloud. For every factual
+question about a document, product, company, or other knowledge-base content, call
+search_knowledge_base before answering. Answer only from the retrieved document excerpts; if no
+relevant excerpt is found, say that the uploaded documents do not contain the answer. Use the
+other tools only when relevant.`;
 
 function ambienceSource(id: string): string | BuiltinAudioClip | undefined {
   switch (id) {
@@ -214,7 +217,7 @@ export async function runVoiceLabSession(params: { room: Room; callId: string; a
     await backgroundAudio.start({ room, agentSession: session });
   }
 
-  session.generateReply({ instructions: 'Greet the user briefly and ask how you can help.' });
+  session.generateReply({ instructions: 'Start the call by saying exactly: "How can I help you?"' });
 
   return { session, agent, backgroundAudio };
 }

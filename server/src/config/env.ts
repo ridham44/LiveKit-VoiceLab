@@ -12,6 +12,20 @@ const configDirectory = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(configDirectory, '../../.env') });
 dotenv.config({ path: resolve(configDirectory, '../../../.env'), override: true });
 
+// A LiveKit token must be signed with the same project credentials that the worker uses.
+// During local development the worker is the authoritative connection configuration, so use
+// its values when present. This also prevents a stale server/.env localhost URL from being sent
+// to the browser while the agent is connected to LiveKit Cloud.
+const agentEnv = dotenv.config({ path: resolve(configDirectory, '../../../agent/.env') }).parsed;
+const liveKitEnv = {
+  LIVEKIT_URL: agentEnv?.LIVEKIT_URL ?? process.env.LIVEKIT_URL,
+  LIVEKIT_API_KEY: agentEnv?.LIVEKIT_API_KEY ?? process.env.LIVEKIT_API_KEY,
+  LIVEKIT_API_SECRET: agentEnv?.LIVEKIT_API_SECRET ?? process.env.LIVEKIT_API_SECRET,
+  LIVEKIT_AGENT_NAME: agentEnv?.LIVEKIT_AGENT_NAME ?? process.env.LIVEKIT_AGENT_NAME,
+  OPENROUTER_API_KEY: agentEnv?.OPENROUTER_API_KEY ?? process.env.OPENROUTER_API_KEY,
+  OPENROUTER_BASE_URL: agentEnv?.OPENROUTER_BASE_URL ?? process.env.OPENROUTER_BASE_URL,
+};
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
   PORT: z.coerce.number().int().positive().default(4100),
@@ -37,7 +51,7 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });
 
-const parsed = envSchema.safeParse(process.env);
+const parsed = envSchema.safeParse({ ...process.env, ...liveKitEnv });
 if (!parsed.success) {
   console.error('❌ Invalid environment configuration:\n');
   for (const issue of parsed.error.issues) {

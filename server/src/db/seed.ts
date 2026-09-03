@@ -4,7 +4,7 @@ import { defaultAgentConfig } from '@voicelab/shared';
 import { prisma } from './client.js';
 
 async function main() {
-  const existing = await prisma.agent.findFirst({ where: { name: 'Default Agent' } });
+  const existing = await prisma.agent.findFirst({ where: { name: 'Default Agent' }, include: { configs: { where: { isActive: true } } } });
   if (!existing) {
     const agent = await prisma.agent.create({
       data: { name: 'Default Agent', description: 'The default VoiceLab test agent.' },
@@ -27,7 +27,31 @@ async function main() {
     });
     console.log(`Seeded agent "${agent.name}" (${agent.id})`);
   } else {
-    console.log('Default agent already exists, skipping.');
+    const activeConfig = existing.configs[0];
+    if (activeConfig?.sttProvider !== 'openrouter' || activeConfig.llmProvider !== 'openrouter' || activeConfig.ttsProvider !== 'openrouter') {
+      const config = defaultAgentConfig();
+      await prisma.$transaction([
+        prisma.agentConfig.updateMany({ where: { agentId: existing.id, isActive: true }, data: { isActive: false } }),
+        prisma.agentConfig.create({
+          data: {
+            agentId: existing.id,
+            isActive: true,
+            sttProvider: config.transcriptionSettings.sttProvider,
+            llmProvider: config.behaviorSettings.llmProvider,
+            ttsProvider: config.voiceSettings.ttsProvider,
+            voiceSettings: config.voiceSettings,
+            transcriptionSettings: config.transcriptionSettings,
+            behaviorSettings: config.behaviorSettings,
+            callSettings: config.callSettings,
+            backgroundAudio: config.voiceSettings.backgroundAudio,
+            tools: config.tools,
+          },
+        }),
+      ]);
+      console.log('Updated default agent to the OpenRouter configuration.');
+    } else {
+      console.log('Default agent already uses the OpenRouter configuration, skipping.');
+    }
   }
 
   const demoOrders: { id: string; status: string; items: { name: string; quantity: number }[]; total: number; estimatedDelivery: Date | null }[] = [
