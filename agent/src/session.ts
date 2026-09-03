@@ -102,7 +102,20 @@ export async function runVoiceLabSession(params: { room: Room; callId: string; a
   // reads both with @livekit/components-react's useVoiceAssistant()/useTranscriptions() —
   // nothing to hand-roll here.
 
+  session.on(AgentSessionEventTypes.UserStateChanged, (ev) => {
+    console.log(`[session] User state changed to: ${ev.newState}`);
+  });
+
+  session.on(AgentSessionEventTypes.AgentStateChanged, (ev) => {
+    console.log(`[session] Agent state changed to: ${ev.newState}`);
+  });
+
+  session.on(AgentSessionEventTypes.Error, (ev) => {
+    console.error(`[session] Error encountered:`, ev.error);
+  });
+
   session.on(AgentSessionEventTypes.UserInputTranscribed, (ev) => {
+    console.log(`[session] STT transcript received: "${ev.transcript}" (final: ${ev.isFinal})`);
     fetch(`${env.SERVER_URL}/api/calls/transcripts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -119,6 +132,7 @@ export async function runVoiceLabSession(params: { room: Room; callId: string; a
 
   session.on(AgentSessionEventTypes.ConversationItemAdded, (ev) => {
     if (ev.item.type !== 'message' || ev.item.role !== 'assistant') return;
+    console.log(`[session] LLM response received: "${ev.item.textContent}"`);
     fetch(`${env.SERVER_URL}/api/calls/transcripts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -130,6 +144,10 @@ export async function runVoiceLabSession(params: { room: Room; callId: string; a
         timestampMs: ev.createdAt,
       }),
     }).catch((err) => console.error('[session] failed to post transcript:', err));
+  });
+
+  session.on(AgentSessionEventTypes.SpeechCreated, () => {
+    console.log(`[session] TTS started, agent audio published`);
   });
 
   // Idle reminders — layered on top of the native `user_state_changed` -> 'away' signal (see

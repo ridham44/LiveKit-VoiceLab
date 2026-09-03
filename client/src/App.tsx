@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type Dispatch, type SetStateAction } from 'react';
 import { RoomAudioRenderer, useTranscriptions } from '@livekit/components-react';
-import type { Room } from 'livekit-client';
+import { RoomEvent, type Room } from 'livekit-client';
 import type { AgentConfigInput, KnowledgeDocumentDto } from '@voicelab/shared';
 import { useVoiceLabRoom } from '@/hooks/useVoiceLabRoom';
 import { useAgentConfig } from '@/hooks/useAgentConfig';
@@ -59,19 +59,79 @@ function LiveTranscript({ room }: { room: Room }) {
   const entries = useTranscriptions({ room });
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Track whether an agent participant has joined
+  const [agentJoined, setAgentJoined] = useState(false);
+  const [agentState, setAgentState] = useState<string>('initializing');
+
+  useEffect(() => {
+    // Check if agent is already in the room
+    for (const p of room.remoteParticipants.values()) {
+      if (p.identity.startsWith('agent-') || p.metadata?.includes('agent')) {
+        setAgentJoined(true);
+        break;
+      }
+    }
+
+    // Watch for participants joining/leaving
+    const onJoin = (p: any) => {
+      if (p.identity?.startsWith('agent-') || p.kind === 2 /* ParticipantKind.AGENT */) {
+        setAgentJoined(true);
+        setAgentState('listening');
+        console.log('[CLIENT] Agent participant joined room:', p.identity);
+      }
+    };
+    const onLeave = (p: any) => {
+      if (p.identity?.startsWith('agent-') || p.kind === 2) {
+        setAgentJoined(false);
+        setAgentState('disconnected');
+        console.warn('[CLIENT] Agent participant left room:', p.identity);
+      }
+    };
+    const onAttributeChanged = (attrs: Record<string, string>, p: any) => {
+      if ((p.identity?.startsWith('agent-') || p.kind === 2) && attrs['lk.agent.state']) {
+        setAgentState(attrs['lk.agent.state']);
+        console.log('[CLIENT] Agent state:', attrs['lk.agent.state']);
+      }
+    };
+
+    room.on(RoomEvent.ParticipantConnected, onJoin);
+    room.on(RoomEvent.ParticipantDisconnected, onLeave);
+    room.on(RoomEvent.ParticipantAttributesChanged, onAttributeChanged);
+    return () => {
+      room.off(RoomEvent.ParticipantConnected, onJoin);
+      room.off(RoomEvent.ParticipantDisconnected, onLeave);
+      room.off(RoomEvent.ParticipantAttributesChanged, onAttributeChanged);
+    };
+  }, [room]);
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [entries]);
 
+  const agentStateColor =
+    agentState === 'speaking' ? 'text-green-600' :
+    agentState === 'thinking' ? 'text-yellow-600' :
+    agentState === 'listening' ? 'text-blue-600' :
+    agentState === 'disconnected' ? 'text-red-600' : 'text-muted-foreground';
+
   return (
     <section className="rounded-xl border bg-card shadow-sm">
-      <div className="border-b px-5 py-4">
-        <h2 className="font-semibold">Live conversation</h2>
-        <p className="text-sm text-muted-foreground">Your speech and the agent&apos;s reply appear here as text.</p>
+      <div className="border-b px-5 py-4 flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold">Live conversation</h2>
+          <p className="text-sm text-muted-foreground">Your speech and the agent&apos;s reply appear here as text.</p>
+        </div>
+        <span className={`text-xs font-medium ${agentStateColor}`}>
+          Agent: {agentJoined ? agentState : 'waiting to join…'}
+        </span>
       </div>
       <div ref={scrollRef} className="max-h-96 min-h-48 space-y-3 overflow-y-auto p-5">
         {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Listening for speech…</p>
+          agentJoined ? (
+            <p className="text-sm text-muted-foreground">Listening for speech… speak into your microphone.</p>
+          ) : (
+            <p className="text-sm text-amber-600">⏳ Waiting for the agent to join. Make sure the agent worker is running (<code>npm run dev:agent</code>).</p>
+          )
         ) : (
           entries.map((entry, index) => {
             const isYou = entry.participantInfo.identity === room.localParticipant.identity;

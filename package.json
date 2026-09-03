@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "LiveKit VoiceLab — a dashboard for testing real LiveKit Voice AI capabilities end to end.",
+  "description": "LiveKit VoiceLab \u2014 a dashboard for testing real LiveKit Voice AI capabilities end to end.",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -14,14 +14,14 @@
     "server"
   ],
   "scripts": {
-    "build:shared": "npm run build --workspace packages/shared",
-    "dev": "npm run build:shared && concurrently -n server,agent,client -c blue,magenta,green \"npm run dev:server\" \"npm run dev:agent\" \"npm run dev:client\"",
-    "dev:server": "npm run dev --workspace server",
-    "dev:agent": "npm run dev --workspace agent",
-    "build": "npm run build:shared && npm run build --workspace server && npm run build --workspace agent && npm run build --workspace client",
+    "build:shared": "node init && npm run build --workspace packages/shared",
+    "dev": "node init && npm run build:shared && concurrently -n server,agent,client -c blue,magenta,green \"npm run dev:server\" \"npm run dev:agent\" \"npm run dev:client\"",
+    "dev:server": "node init && npm run dev --workspace server",
+    "dev:agent": "node init && npm run dev --workspace agent",
+    "build": "node init && npm run build:shared && npm run build --workspace server && npm run build --workspace agent && npm run build --workspace client",
     "typecheck": "npm run build:shared && npm run typecheck --workspaces --if-present",
     "download-files": "npm run download-files --workspace agent",
-    "dev:client": "npm run dev --workspace client",
+    "dev:client": "node init && npm run dev --workspace client",
     "infra:up": "docker compose up -d postgres minio minio-init",
     "infra:down": "docker compose down",
     "infra:logs": "docker compose logs -f postgres minio",
@@ -31,6 +31,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.2.1",
+    "dotenv": "^8.2.0",
+    "node-fetch": "^3.3.2",
     "typescript": "^5.9.3"
   },
   "allowScripts": {
