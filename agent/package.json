@@ -5,9 +5,9 @@
   "type": "module",
   "main": "dist/agent.js",
   "scripts": {
-    "dev": "tsx src/agent.ts dev",
-    "start": "node dist/agent.js start",
-    "build": "tsc -p tsconfig.json",
+    "dev": "node init && tsx src/agent.ts dev",
+    "start": "node init && node dist/agent.js start",
+    "build": "node init && tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "download-files": "tsx src/agent.ts download-files"
   },

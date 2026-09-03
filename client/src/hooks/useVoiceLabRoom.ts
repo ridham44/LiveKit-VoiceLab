@@ -6,7 +6,7 @@
  * rather than duplicated.
  */
 import { useCallback, useRef, useState } from 'react';
-import { Room, RoomEvent, ConnectionState } from 'livekit-client';
+import { Room, RoomEvent, ConnectionState, TrackEvent } from 'livekit-client';
 import { toast } from 'sonner';
 import { api, ApiError } from '@/services/api';
 
@@ -41,8 +41,37 @@ export function useVoiceLabRoom(agentId: string | undefined) {
       setRoom(null);
     });
     newRoom.on(RoomEvent.ConnectionStateChanged, (state) => {
-      if (state === ConnectionState.Reconnecting) toast.warning('Reconnecting to LiveKit…');
-      if (state === ConnectionState.Connected) toast.success('Connected to LiveKit room');
+      if (state === ConnectionState.Connected) {
+        console.log('[CLIENT] LiveKit connected');
+        toast.success('Connected to LiveKit room');
+      }
+    });
+
+    newRoom.on(RoomEvent.LocalTrackPublished, (pub) => {
+      if (pub.source === 'microphone') console.log('[CLIENT] Microphone track published');
+    });
+
+    newRoom.on(RoomEvent.TrackSubscribed, (track, pub, participant) => {
+      if (track.kind === 'audio') {
+        console.log(`[CLIENT] Remote audio track subscribed (participant: ${participant.identity})`);
+        
+        // Listen to when audio starts playing
+        track.on(TrackEvent.AudioPlaybackStarted, () => {
+          console.log('[CLIENT] Remote audio playback started');
+        });
+        track.on(TrackEvent.AudioPlaybackFailed, (err) => {
+          console.error('[CLIENT] Remote audio playback failed (autoplay restricted?)', err);
+        });
+      }
+    });
+
+    newRoom.on(RoomEvent.ParticipantDisconnected, (participant) => {
+      if (participant.identity.startsWith('agent-')) {
+        console.error('[CLIENT] Agent disconnected unexpectedly');
+        setError('Agent disconnected unexpectedly. Check agent logs.');
+        setPhase('error');
+        void newRoom.disconnect();
+      }
     });
 
     try {
@@ -54,6 +83,7 @@ export function useVoiceLabRoom(agentId: string | undefined) {
         setMicPermission('granted');
       } catch {
         setMicPermission('denied');
+        console.error('[CLIENT] Microphone permission denied');
         toast.error('Microphone permission denied — the agent will not hear you.');
       }
 
