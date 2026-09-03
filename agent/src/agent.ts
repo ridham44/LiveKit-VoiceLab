@@ -37,14 +37,18 @@ async function reportCallEnded(callId: string, reason: string) {
 
 export default defineAgent({
   entry: async (ctx: JobContext) => {
+    console.log(`[agent] Job received for room ${ctx.room.name}`);
     const metadata = JSON.parse(ctx.job.metadata || '{}') as Partial<DispatchMetadata>;
     if (!metadata.callId || !metadata.agentId) {
       throw new Error('Agent job dispatched without callId/agentId metadata — was it created via POST /api/sessions/start?');
     }
     const { callId, agentId } = metadata as DispatchMetadata;
+    console.log(`[agent] Dispatch metadata: callId=${callId}, agentId=${agentId}`);
 
     await ctx.connect(undefined, AutoSubscribe.AUDIO_ONLY);
+    console.log(`[agent] Connected to room ${ctx.room.name}. Waiting for participant...`);
     await ctx.waitForParticipant();
+    console.log(`[agent] Participant joined. Starting session...`);
 
     const config = await fetchAgentConfig(agentId);
 

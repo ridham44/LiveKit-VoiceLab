@@ -217,6 +217,7 @@ export async function runVoiceLabSession(params: { room: Room; callId: string; a
     await backgroundAudio.start({ room, agentSession: session });
   }
 
+  console.log(`[session] Session started for call ${callId}`);
   session.generateReply({ instructions: 'Start the call by saying exactly: "How can I help you?"' });
 
   return { session, agent, backgroundAudio };

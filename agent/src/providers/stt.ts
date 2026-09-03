@@ -1,12 +1,6 @@
-/**
- * STT provider factory. Fast/Accurate/Custom (TranscriptionSettings.mode) select a provider
- * model via the catalog rather than being a LiveKit primitive — see
- * packages/shared/src/catalog.ts STT_CATALOG[provider].modes and capability.ts 'stt.mode'.
- */
-import * as openai from '@livekit/agents-plugin-openai';
-import type { stt } from '@livekit/agents';
+﻿/** STT provider factory. */
+import { inference, type stt } from '@livekit/agents';
 import { STT_CATALOG, type TranscriptionSettings } from '@voicelab/shared';
-import { openAiCompatible } from '../config.js';
 
 function resolveModel(settings: TranscriptionSettings): string {
   if (settings.mode === 'custom' && settings.customModel) return settings.customModel;
@@ -18,17 +12,10 @@ export function buildStt(settings: TranscriptionSettings): stt.STT {
   const model = resolveModel(settings);
 
   switch (settings.sttProvider) {
-    case 'openrouter':
-      return new openai.STT({
-        apiKey: openAiCompatible.apiKey,
-        baseURL: openAiCompatible.baseURL,
-        model,
-        language: settings.language,
-        // No native keyword-boost API on OpenAI transcription models — best-effort fallback:
-        // fold the vocabulary/boosted terms into the transcription prompt (see capability.ts
-        // 'stt.boostedKeywords').
-        prompt: [...settings.vocabulary, ...settings.boostedKeywords.map((k) => k.term)].join(', ') || undefined,
-        keywords: settings.vocabulary,
+    case 'livekit':
+      return new inference.STT({
+        model: model as any,
+        language: settings.language as any,
       });
     default: {
       const exhaustive: never = settings.sttProvider;

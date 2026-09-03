@@ -1,4 +1,4 @@
-/**
+﻿/**
  * The full, validated shape of an agent configuration. This is the single source of truth used
  * by:
  *   - client: the Voice Settings / Transcription / Behavior / Call Settings forms
@@ -139,8 +139,8 @@ export type AgentConfigInput = z.infer<typeof agentConfigInputSchema>;
 export function defaultAgentConfig(): AgentConfigInput {
   return agentConfigInputSchema.parse({
     voiceSettings: {
-      ttsProvider: 'openrouter',
-      ttsModel: 'openai/gpt-4o-mini-tts-2025-12-15',
+      ttsProvider: 'livekit',
+      ttsModel: 'openai/tts-1',
       voiceId: 'alloy',
       speed: 1,
       volume: 1,
@@ -152,7 +152,7 @@ export function defaultAgentConfig(): AgentConfigInput {
       dynamicSpeed: { enabled: false, urgentMultiplier: 1.25, complexMultiplier: 0.85 },
     },
     transcriptionSettings: {
-      sttProvider: 'openrouter',
+      sttProvider: 'livekit',
       mode: 'accurate',
       language: 'en',
       vocabulary: [],
@@ -162,7 +162,7 @@ export function defaultAgentConfig(): AgentConfigInput {
       diarization: false,
     },
     behaviorSettings: {
-      llmProvider: 'openrouter',
+      llmProvider: 'livekit',
       llmModel: 'openai/gpt-4o-mini',
       llmTemperature: 0.8,
       turnDetection: 'vad',

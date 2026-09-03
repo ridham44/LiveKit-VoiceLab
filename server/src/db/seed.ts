@@ -28,7 +28,7 @@ async function main() {
     console.log(`Seeded agent "${agent.name}" (${agent.id})`);
   } else {
     const activeConfig = existing.configs[0];
-    if (activeConfig?.sttProvider !== 'openrouter' || activeConfig.llmProvider !== 'openrouter' || activeConfig.ttsProvider !== 'openrouter') {
+    if (activeConfig?.sttProvider !== 'livekit' || activeConfig.llmProvider !== 'livekit' || activeConfig.ttsProvider !== 'livekit') {
       const config = defaultAgentConfig();
       await prisma.$transaction([
         prisma.agentConfig.updateMany({ where: { agentId: existing.id, isActive: true }, data: { isActive: false } }),
@@ -48,9 +48,9 @@ async function main() {
           },
         }),
       ]);
-      console.log('Updated default agent to the OpenRouter configuration.');
+      console.log('Updated default agent to the LiveKit Cloud Inference configuration.');
     } else {
-      console.log('Default agent already uses the OpenRouter configuration, skipping.');
+      console.log('Default agent already uses the LiveKit Cloud configuration, skipping.');
     }
   }
 
